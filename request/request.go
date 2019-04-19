@@ -3,6 +3,7 @@ package request
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -10,6 +11,11 @@ type requestLine struct {
 	method      string
 	requestUri  string
 	httpVersion string
+}
+
+type Request struct {
+	conn    net.Conn
+	reqLine requestLine
 }
 
 const (
@@ -22,8 +28,32 @@ const (
 	HTTP1_1 = "HTTP/1.1"
 )
 
+func New(conn net.Conn, rl requestLine) Request {
+	return Request{conn: conn, reqLine: rl}
+}
+
+func (r Request) RequestLine() requestLine {
+	return r.reqLine
+}
+
+func (r Request) Connection() net.Conn {
+	return r.conn
+}
+
 func (rl requestLine) String() string {
 	return fmt.Sprintf("%s %s %s\r\n", rl.method, rl.requestUri, rl.httpVersion)
+}
+
+func (rl requestLine) Method() string {
+	return rl.method
+}
+
+func (rl requestLine) RequestUri() string {
+	return rl.requestUri
+}
+
+func (rl requestLine) HttpVersion() string {
+	return rl.httpVersion
 }
 
 func RequestLineParser(reqLine string) (requestLine, error) {

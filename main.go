@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/dapine/saws/fs"
 	"github.com/dapine/saws/request"
 )
 
@@ -14,13 +15,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not listen to connections: ", err)
 	}
-
-	x, err := request.RequestLineParser("GET /foo.html HTTP/1.1")
-	if err != nil {
-		log.Println("Could not complete a request: ", err)
-	}
-
-	fmt.Println(x.String())
 
 	for {
 		conn, err := ln.Accept()
@@ -32,15 +26,25 @@ func main() {
 	}
 }
 
-func returnRequest(conn net.Conn) {
-	getResponseStr := fmt.Sprint("HTTP/1.1 200 OK\r\nDate: Thu, 18 Apr 2019 07:47:38 GMT\r\nContent-Length:19\r\nContent-Type: text/html\r\n\r\n<h1>hello world</h1>")
+func sendResponse(req request.Request) {
+	status := "HTTP/1.1 200 OK"
+	// TODO
+	date := "Thu, 18 Apr 2019 07:47:38 GMT"
+	ct := "text/html"
+	content, err := fs.ReadResource(req.RequestLine().RequestUri())
+	if err != nil {
+		log.Println("Resource not found")
+	}
+	cl := len(content)
 
-	_, err := conn.Write([]byte(getResponseStr))
+	getResponseStr := fmt.Sprintf("%s\r\nDate: %s\r\nContent-Length:%d\r\nContent-Type: %s\r\n\r\n%s", status, date, cl, ct, string(content[:]))
+
+	_, err = req.Connection().Write([]byte(getResponseStr))
 	if err != nil {
 		log.Println("Could not response: ", err)
 	}
 
-	conn.Close()
+	req.Connection().Close()
 }
 
 func getRequest(conn net.Conn) {
@@ -51,17 +55,11 @@ func getRequest(conn net.Conn) {
 			return
 		}
 
-		fmt.Println(string(line[:]))
-
-		switch string(line[:]) {
-		case "GET\r\n":
-			returnRequest(conn)
-			break
-		case "GET / HTTP/1.1\r\n":
-			returnRequest(conn)
-			break
-		default:
-			log.Println("No implemented: ", string(line[:]))
+		reqLine, err := request.RequestLineParser(string(line[:]))
+		if err != nil {
+			log.Println("Could not complete request: ", err)
 		}
+
+		sendResponse(request.New(conn, reqLine))
 	}
 }
