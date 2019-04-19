@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+
+	"github.com/dapine/saws/request"
 )
 
 func main() {
@@ -12,6 +14,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not listen to connections: ", err)
 	}
+
+	x, err := request.RequestLineParser("GET /foo.html HTTP/1.1")
+	if err != nil {
+		log.Println("Could not complete a request: ", err)
+	}
+
+	fmt.Println(x.String())
 
 	for {
 		conn, err := ln.Accept()
