@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/dapine/saws/fs"
 	"github.com/dapine/saws/request"
@@ -28,16 +29,16 @@ func main() {
 
 func sendResponse(req request.Request) {
 	status := "HTTP/1.1 200 OK"
-	// TODO
-	date := "Thu, 18 Apr 2019 07:47:38 GMT"
+	t := time.Now().UTC()
+	date := t.Format(time.RFC1123)
 	ct := "text/html"
 	content, err := fs.ReadResource(req.RequestLine().RequestUri())
 	if err != nil {
-		log.Println("Resource not found")
+		log.Println("Resource not found:", err)
 	}
 	cl := len(content)
 
-	getResponseStr := fmt.Sprintf("%s\r\nDate: %s\r\nContent-Length:%d\r\nContent-Type: %s\r\n\r\n%s", status, date, cl, ct, string(content[:]))
+	getResponseStr := fmt.Sprintf("%s\r\nDate: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s", status, date, cl, ct, string(content[:]))
 
 	_, err = req.Connection().Write([]byte(getResponseStr))
 	if err != nil {
