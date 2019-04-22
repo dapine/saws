@@ -8,7 +8,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/dapine/saws/request/resource"
+	"github.com/dapine/saws/http/resource"
 )
 
 func ReadResource(rpath string) (resource.Resource, error) {

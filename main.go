@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dapine/saws/fs"
-	"github.com/dapine/saws/request"
+	"github.com/dapine/saws/http/request"
 )
 
 func main() {
