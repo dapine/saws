@@ -1,7 +1,9 @@
 package response
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"time"
 
 	"github.com/dapine/saws/fs"
@@ -24,23 +26,41 @@ type Header struct {
 	resource    resource.Resource
 }
 
+const htmlStatusTemplate = `<!DOCTYPE html>
+<html>
+	<head>
+		<title>{{.Code}} {{.Name}}</title>
+	</head>
+	<body>
+		<h1>{{.Code}} {{.Name}}</h1>
+	</body>
+</html>
+`
+
+func getHtmlStatus(code int, name string) []byte {
+	type httpCode struct {
+		Code int
+		Name string
+	}
+
+	t := template.Must(template.New("htmlStatusTemplate").Parse(htmlStatusTemplate))
+
+	var buf bytes.Buffer
+
+	t.Execute(&buf, httpCode{Code: code, Name: name})
+
+	return buf.Bytes()
+}
+
 func NewHeader(httpVersion string, req request.Request) Header {
 	t := time.Now().UTC()
 	r, err := fs.ReadResource(req.RequestLine().RequestUri())
 	if err != nil {
-		sc := 404
-		// TODO: Use templates to create generic codes html
-		html := `<!DOCTYPE html>
-		<html>
-			<head>
-				<title>404 Not Found</title>
-			</head>
-			<body>
-				<h1>404 Not Found</h1>
-			</body>
-		</html>`
 
-		resource404 := resource.New([]byte(html), "text/html", time.Now(), int64(len([]byte(html))), "")
+		sc := 404
+		html := getHtmlStatus(sc, StatusName[sc])
+
+		resource404 := resource.New(html, "text/html", time.Now(), int64(len(html)), "")
 		return Header{httpVersion: httpVersion, statusCode: sc, statusName: StatusName[sc], date: t, resource: resource404}
 	}
 
