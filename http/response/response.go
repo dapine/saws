@@ -29,7 +29,19 @@ func NewHeader(httpVersion string, req request.Request) Header {
 	r, err := fs.ReadResource(req.RequestLine().RequestUri())
 	if err != nil {
 		sc := 404
-		return Header{httpVersion: httpVersion, statusCode: sc, statusName: StatusName[sc], date: t, resource: resource.Empty}
+		// TODO: Use templates to create generic codes html
+		html := `<!DOCTYPE html>
+		<html>
+			<head>
+				<title>404 Not Found</title>
+			</head>
+			<body>
+				<h1>404 Not Found</h1>
+			</body>
+		</html>`
+
+		resource404 := resource.New([]byte(html), "text/html", time.Now(), int64(len([]byte(html))), "")
+		return Header{httpVersion: httpVersion, statusCode: sc, statusName: StatusName[sc], date: t, resource: resource404}
 	}
 
 	sc := 200
