@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/dapine/saws/http/uri"
 )
 
 type requestLine struct {
@@ -70,7 +72,10 @@ func RequestLineParser(reqLine string) (requestLine, error) {
 		return requestLine{}, err
 	}
 
-	// TODO: URI parser/validator
+	if !uri.ValidAbsPath(toks[1]) {
+		// Bad request
+		return requestLine{}, errors.New("Parse error: URI absolute path is not valid")
+	}
 	ruri := toks[1]
 
 	httpv, err := matchHttpVersion(toks[2])
