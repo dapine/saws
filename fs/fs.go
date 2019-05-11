@@ -1,25 +1,32 @@
 package fs
 
 import (
+	"bytes"
 	"errors"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"mime"
 	"os"
 	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/dapine/saws/http/resource"
 )
 
 func ReadResource(rpath string) (resource.Resource, error) {
-	// TODO: Convert path from HTTP URI format to Filesystem format
-	// XXX: Better relative path resolve
-	// 47: /
-	if len(rpath) > 1 && rpath[0] == 47 {
-		rpath = "." + rpath
+	linkUri := rpath
+	basePath, _ := filepath.Abs(".")
+
+	if len(rpath) <= 1 && rpath[0] == 47 {
+		rpath = ""
+		linkUri = ""
 	} else {
-		rpath = "./" + rpath
+		rpath, _ = filepath.Abs(rpath)
 	}
+
+	rpath = path.Join(basePath, rpath)
 
 	var data []byte
 	var fn string
@@ -30,11 +37,34 @@ func ReadResource(rpath string) (resource.Resource, error) {
 	}
 
 	if isdir {
-		// XXX
 		fn, data, err = findIndex(rpath)
 		if err != nil {
 			// if index is not found, return a directory listing
-			log.Println("There is no index file. Showing dir list")
+			files, _ := ioutil.ReadDir(rpath)
+
+			s := struct {
+				Files    []os.FileInfo
+				Basepath string
+			}{Files: files, Basepath: linkUri}
+
+			const tmpl = `<html>
+	<body>
+		{{range $i, $f := .Files}}
+		<div>
+			<a href="{{$.Basepath}}/{{$f.Name}}">{{$f.Name}}</a>
+		</div>
+		{{end}}
+	</body>
+</html>`
+
+			var buf bytes.Buffer
+
+			t := template.Must(template.New("tmpl").Parse(tmpl))
+			t.Execute(&buf, s)
+
+			r := resource.New(buf.Bytes(), "text/html", time.Now(), int64(buf.Len()), "")
+
+			return r, nil
 		}
 	} else {
 		data, err = ioutil.ReadFile(rpath)
