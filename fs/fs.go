@@ -40,29 +40,12 @@ func ReadResource(rpath string) (resource.Resource, error) {
 		fn, data, err = findIndex(rpath)
 		if err != nil {
 			// if index is not found, return a directory listing
-			files, _ := ioutil.ReadDir(rpath)
+			data, err := genHtmlDirListing(linkUri, rpath)
+			if err != nil {
+				return resource.Empty, err
+			}
 
-			s := struct {
-				Files    []os.FileInfo
-				Basepath string
-			}{Files: files, Basepath: linkUri}
-
-			const tmpl = `<html>
-	<body>
-		{{range $i, $f := .Files}}
-		<div>
-			<a href="{{$.Basepath}}/{{$f.Name}}">{{$f.Name}}</a>
-		</div>
-		{{end}}
-	</body>
-</html>`
-
-			var buf bytes.Buffer
-
-			t := template.Must(template.New("tmpl").Parse(tmpl))
-			t.Execute(&buf, s)
-
-			r := resource.New(buf.Bytes(), "text/html", time.Now(), int64(buf.Len()), "")
+			r := resource.New(data, "text/html", time.Now(), int64(len(data)), "")
 
 			return r, nil
 		}
@@ -121,4 +104,35 @@ func inStringSlice(str string, list []string) bool {
 	}
 
 	return false
+}
+
+func genHtmlDirListing(basePath, pathLs string) ([]byte, error) {
+	files, err := ioutil.ReadDir(pathLs)
+	if err != nil {
+		return []byte{}, errors.New("Could not list directory " + pathLs)
+	}
+
+	s := struct {
+		Files    []os.FileInfo
+		Basepath string
+	}{Files: files, Basepath: basePath}
+
+	const tmpl = `<html>
+	<body>
+		{{range $i, $f := .Files}}
+		<div>
+			<a href="{{$.Basepath}}/{{$f.Name}}">{{$f.Name}}</a>
+		</div>
+		{{end}}
+	</body>
+</html>`
+
+	var buf bytes.Buffer
+
+	t := template.Must(template.New("tmpl").Parse(tmpl))
+	t.Execute(&buf, s)
+
+	b := buf.Bytes()
+
+	return b, nil
 }

@@ -1,21 +1,13 @@
 package response
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"time"
 
 	"github.com/dapine/saws/fs"
 	"github.com/dapine/saws/http/request"
 	"github.com/dapine/saws/http/resource"
 )
-
-// TODO: Finish this
-var StatusName map[int]string = map[int]string{
-	200: "OK",
-	404: "Not Found",
-}
 
 type Header struct {
 	// TODO: Implement more fields
@@ -26,39 +18,13 @@ type Header struct {
 	resource    resource.Resource
 }
 
-const htmlStatusTemplate = `<!DOCTYPE html>
-<html>
-	<head>
-		<title>{{.Code}} {{.Name}}</title>
-	</head>
-	<body>
-		<h1>{{.Code}} {{.Name}}</h1>
-	</body>
-</html>
-`
-
-func getHtmlStatus(code int, name string) []byte {
-	type httpCode struct {
-		Code int
-		Name string
-	}
-
-	t := template.Must(template.New("htmlStatusTemplate").Parse(htmlStatusTemplate))
-
-	var buf bytes.Buffer
-
-	t.Execute(&buf, httpCode{Code: code, Name: name})
-
-	return buf.Bytes()
-}
-
 func NewHeader(httpVersion string, req request.Request) Header {
 	t := time.Now().UTC()
 	r, err := fs.ReadResource(req.RequestLine().RequestUri())
 	if err != nil {
-
+		// Resource not found, so emit a 404
 		sc := 404
-		html := getHtmlStatus(sc, StatusName[sc])
+		html := genHtmlStatusPage(sc)
 
 		resource404 := resource.New(html, "text/html", time.Now(), int64(len(html)), "")
 		return Header{httpVersion: httpVersion, statusCode: sc, statusName: StatusName[sc], date: t, resource: resource404}
